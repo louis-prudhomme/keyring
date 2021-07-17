@@ -1,16 +1,13 @@
 use crate::keyring::constants::*;
-use std::fs::File;
-use std::io::Read;
 use crate::keyring::errors::KeyringError;
+use crate::keyring::io::js_wrapper::{check_info_exists_in_js, read_info_from_js};
 
 pub fn check_db_file_exists() -> bool {
     return check_file_exists(CONTROL_FILE_NAME);
 }
 
 fn check_file_exists(filename: &str) -> bool {
-    return std::path::Path
-    ::new(filename)
-        .exists();
+    return check_info_exists_in_js(filename);
 }
 
 pub fn check_cred_file_exists(cred_name: &str) -> bool {
@@ -46,12 +43,8 @@ pub fn read_cred_file(cred_name: &str) -> Result<String, KeyringError> {
 }
 
 fn read_file_to_string(path: &str) -> Result<String, KeyringError> {
-    let mut res = String::new();
-    return match File::open(path)
-        .map(|mut file| file
-            .read_to_string(&mut res)) {
-        Ok(_) => Ok(res),
-        Err(e) => Err(KeyringError::from(e))
-    }
-
+    return match read_info_from_js(path) {
+        Ok(res) => Ok(res),
+        Err(e) => Err(KeyringError::from(e)),
+    };
 }

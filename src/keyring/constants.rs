@@ -10,5 +10,5 @@ pub const CONTROL_FILE_CONTENT: &str = "control";
 pub const KEY_FILE_NAME: &str = ".key";
 pub const KEY_LENGTH: usize = 256;
 pub const IV_FILE_EXT: &str = ".iv";
-pub const IV_LENGTH: usize = 32;
+pub const IV_LENGTH: usize = 16;
 pub const CRED_FILE_EXT: &str = ".cred";

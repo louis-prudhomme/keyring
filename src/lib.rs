@@ -14,17 +14,18 @@ use crate::keyring::io::read::*;
 use crate::keyring::io::write::*;
 use crate::keyring::utils::Cred;
 
-
 #[macro_use]
 extern crate serde_derive;
 
 #[wasm_bindgen]
 pub fn check_db_exists() -> bool {
-    return check_db_file_exists(); 
+    console_error_panic_hook::set_once();
+    return check_db_file_exists();
 }
 
 #[wasm_bindgen]
 pub fn sign_up(user_cred: Cred) -> Result<bool, JsValue> {
+    console_error_panic_hook::set_once();
     // if db exist, then error
     if check_db_exists() {
         panic!("Database already exists");
@@ -37,16 +38,20 @@ pub fn sign_up(user_cred: Cred) -> Result<bool, JsValue> {
     let hash = hash_password(&user_cred.pass, &user_cred.login, &fk);
 
     // create db (simple control file)
-    create_ctrl_file(hash).expect("");
+    create_ctrl_file(hash.expect("")).expect("");
     return Ok(true);
 }
 
-fn hash_password(password: &str, salt: &str, pepper: &str) -> String {
+fn hash_password(password: &str, salt: &str, pepper: &str) -> Result<String, KeyringError> {
     let mut config = Config::default();
     config.secret = pepper.as_bytes();
     // hashes the password to obtain derivation key
-    return argon2::hash_encoded(password.as_bytes(), salt.as_bytes(), &config)
-    .unwrap();//todo
+    return Ok(argon2::hash_encoded(
+        password.as_bytes(),
+        salt.as_bytes(),
+        &config,
+    )?);
+    //todo
 }
 
 // creates a control file to check password authenticity
@@ -88,7 +93,7 @@ fn check_login(user_cred: Cred) -> Result<String, KeyringError> {
     let iv = read_iv_file("")?;
     let fk = read_key_file()?;
 
-    let mk = hash_password(&user_cred.pass, &user_cred.login, &fk);
+    let mk = hash_password(&user_cred.pass, &user_cred.login, &fk)?;
 
     // configure cipher
     let cipher = Aes256Cbc::new_from_slices(mk.as_bytes(), iv.as_bytes())?;
@@ -137,7 +142,9 @@ pub fn obtain_cred(user_cred: Cred, cred_name: &str) -> Result<Cred, JsValue> {
     let result_cred = cipher
         .decrypt(&mut buf)
         .map(|clear| clear.to_vec())
-        .map(|clear| String::from_utf8(clear)).expect("").expect("");
+        .map(|clear| String::from_utf8(clear))
+        .expect("")
+        .expect("");
 
     return Ok(Cred {
         login: cred_name.to_string(),

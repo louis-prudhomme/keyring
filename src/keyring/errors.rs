@@ -1,8 +1,10 @@
 use block_modes::BlockModeError as BMError;
 use block_modes::InvalidKeyIvLength as IvError;
-use wasm_bindgen::JsValue;
+use serde_json::error::Error as SerdeError;
 use std::io::Error as IoError;
 use std::string::FromUtf8Error;
+use wasm_bindgen::JsValue;
+use argon2::Error as ArgonError;
 
 #[derive(Debug)]
 pub struct KeyringError {
@@ -13,7 +15,7 @@ pub struct KeyringError {
 impl From<IoError> for KeyringError {
     fn from(e: IoError) -> Self {
         return KeyringError {
-            kind: "io".to_string(),
+            kind: "IO".to_string(),
             message: e.to_string(),
         };
     }
@@ -22,16 +24,22 @@ impl From<IoError> for KeyringError {
 impl From<&str> for KeyringError {
     fn from(e: &str) -> Self {
         return KeyringError {
-            kind: "manual".to_string(),
+            kind: "Manual".to_string(),
             message: e.to_string(),
         };
+    }
+}
+
+impl From<String> for KeyringError {
+    fn from(e: String) -> Self {
+        return KeyringError::from(&*e);
     }
 }
 
 impl From<IvError> for KeyringError {
     fn from(e: IvError) -> Self {
         return KeyringError {
-            kind: "invalid_iv".to_string(),
+            kind: "IV".to_string(),
             message: e.to_string(),
         };
     }
@@ -40,7 +48,7 @@ impl From<IvError> for KeyringError {
 impl From<BMError> for KeyringError {
     fn from(e: BMError) -> Self {
         return KeyringError {
-            kind: "invalid_iv".to_string(),
+            kind: "?".to_string(),
             message: e.to_string(),
         };
     }
@@ -49,8 +57,35 @@ impl From<BMError> for KeyringError {
 impl From<FromUtf8Error> for KeyringError {
     fn from(e: FromUtf8Error) -> Self {
         return KeyringError {
-            kind: "invalid_iv".to_string(),
+            kind: "UTF8 parsing error".to_string(),
             message: e.to_string(),
+        };
+    }
+}
+
+impl From<SerdeError> for KeyringError {
+    fn from(e: SerdeError) -> Self {
+        return KeyringError {
+            kind: "JS parsing error".to_string(),
+            message: e.to_string(),
+        };
+    }
+}
+
+impl From<ArgonError> for KeyringError {
+    fn from(e: ArgonError) -> Self {
+        return KeyringError {
+            kind: "Argon Error".to_string(),
+            message: e.to_string(),
+        };
+    }
+}
+
+impl From<JsValue> for KeyringError {
+    fn from(e: JsValue) -> Self {
+        return KeyringError {
+            kind: "JS error".to_string(),
+            message: e.as_string().unwrap_or("shagged".to_string()),
         };
     }
 }
