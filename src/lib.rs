@@ -69,14 +69,13 @@ fn check_login(user_cred: Cred) -> Result<ArgonHash, KeyringError> {
     let iv = read_iv_file("")?;
     let fk = read_key_file()?;
 
-    log("tae");
     let mk = hash_password(&user_cred.pass, &user_cred.login, &fk)?;
 
-    log("tae");
     let mut cleared = Vec::new();
+
     sym_decrypt(&read_ctrl_file()?, &mk, &iv, &mut cleared)?;
     let is_correct = cleared.eq(&CONTROL_FILE_CONTENT);
-
+    
     return match is_correct {
         true => Ok(mk),
         false => return Err(KeyringError::from("Incorrect password")),
@@ -111,7 +110,7 @@ pub fn obtain_cred(user_cred: Cred, cred_name: &str) -> Result<Cred, JsValue> {
 pub fn create_cred(user_cred: Cred, target_cred: Cred) -> Result<bool, JsValue> {
     let mk = check_login(user_cred).expect("");
     let cred_iv = write_iv_file(&target_cred.login).expect("");
-log("tae");
+    
     let mut ciphered = Vec::new();
     sym_encrypt(&target_cred.pass.as_bytes(), &mk, &cred_iv, &mut ciphered).expect("");
     log("tamer");
