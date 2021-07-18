@@ -43,8 +43,5 @@ pub fn read_cred_file(cred_name: &str) -> Result<String, KeyringError> {
 }
 
 fn read_file_to_string(path: &str) -> Result<String, KeyringError> {
-    return match read_info_from_js(path) {
-        Ok(res) => Ok(res),
-        Err(e) => Err(KeyringError::from(e)),
-    };
+    return read_info_from_js(path).map_err(|e| KeyringError::from(e));
 }

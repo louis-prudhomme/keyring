@@ -9,16 +9,19 @@ extern "C" {
     fn write_info(name: &str, contents: &str) -> Result<(), JsValue>;
 }
 
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    pub fn log(thing: &str);
+}
+
 pub fn write_info_to_js(name: &str, contents: &str) -> Result<(), KeyringError> {
     write_info(name, contents)?;
     Ok(())
 }
 
 pub fn read_info_from_js(name: &str) -> Result<String, KeyringError> {
-    return match read_info(name) {
-        Ok(v) => Ok(v),
-        Err(e) => Err(KeyringError::from(e.as_string().unwrap_or("".to_string()))),
-    };
+    return read_info(name).map_err(|e| KeyringError::from(e));
 }
 
 pub fn check_info_exists_in_js(name: &str) -> bool {

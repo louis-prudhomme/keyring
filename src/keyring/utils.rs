@@ -1,6 +1,10 @@
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
+use crate::KEY_LENGTH;
+use crate::keyring::constants::Key;
+use crate::keyring::constants::IV;
+use crate::keyring::constants::IV_LENGTH;
+use rand::{thread_rng, RngCore};
 use wasm_bindgen::prelude::*;
+
 extern crate console_error_panic_hook;
 
 #[wasm_bindgen]
@@ -18,10 +22,23 @@ impl Cred {
     }
 }
 
-pub fn gen_rand_string(length: usize) -> String {
-    return thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(length)
+//todo create generic fn
+pub fn gen_rand_iv() -> IV {
+    let mut buf = [0u8; IV_LENGTH];
+    thread_rng().fill_bytes(&mut buf);
+    return buf;
+}
+
+pub fn gen_rand_key() -> Key {
+    let mut buf = [0u8; KEY_LENGTH];
+    thread_rng().fill_bytes(&mut buf);
+    return buf;
+}
+
+pub fn u8_arr_to_string(array: &[u8]) -> String {
+    return (0..array.len())
+        .map(|i| array.get(i))
+        .map(|o| *o.unwrap())
         .map(char::from)
         .collect();
 }
