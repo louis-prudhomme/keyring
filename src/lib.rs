@@ -1,12 +1,10 @@
 // The wasm-pack uses wasm-bindgen to build and generate JavaScript binding file.
 // Import the wasm-bindgen crate.
-use crate::keyring::cryptutils::{hash_password, sym_decrypt, sym_encrypt};
 use crate::keyring::constants::*;
-use crate::keyring::utils::u8_arr_to_string;
+use crate::keyring::cryptutils::{hash_password, sym_decrypt, sym_encrypt};
 
 use wasm_bindgen::prelude::*;
 mod keyring;
-
 
 use crate::keyring::errors::*;
 use crate::keyring::io::read::*;
@@ -16,13 +14,16 @@ use std::panic;
 
 #[macro_use]
 extern crate serde_derive;
+use crate::keyring::io::js_wrapper::log;
 
+/// Checks whether a password database already exists.
 #[wasm_bindgen]
 pub fn check_db_exists() -> bool {
     console_error_panic_hook::set_once();
     return check_db_file_exists();
 }
 
+/// Creates an empty password database and returns true upon success.
 #[wasm_bindgen]
 pub fn sign_up(user_cred: Cred) -> Result<bool, JsValue> {
     // if db exist, then error
@@ -38,21 +39,22 @@ pub fn sign_up(user_cred: Cred) -> Result<bool, JsValue> {
 
     // create db (simple control file)
     create_ctrl_file(hash).expect("");
-
     return Ok(true);
 }
 
-// creates a control file to check password authenticity
+/// Creates a control file to check password authenticity.
 fn create_ctrl_file(mk: ArgonHash) -> Result<(), KeyringError> {
     // create an iv (aes is a block cipher)
     let iv = write_iv_file("")?;
 
-    let ciphered = sym_encrypt(CONTROL_FILE_CONTENT, &mk, &iv)?;
+    let mut ciphered = vec![0; BLOCK_SIZE]; //todo different length % block size
+    sym_encrypt(CONTROL_FILE_CONTENT, &mk, &iv, &mut ciphered)?;
 
     // creates the effective control file (ciphered with master key)
     return write_ctrl_file(&ciphered);
 }
 
+/// Returns true if the credentials match the database.
 #[wasm_bindgen]
 pub fn sign_in(user_cred: Cred) -> Result<bool, JsValue> {
     if !check_db_exists() {
@@ -67,10 +69,13 @@ fn check_login(user_cred: Cred) -> Result<ArgonHash, KeyringError> {
     let iv = read_iv_file("")?;
     let fk = read_key_file()?;
 
-    let mk = hash_password(&user_cred.pass, &user_cred.login, &fk.as_bytes())?;
+    log("tae");
+    let mk = hash_password(&user_cred.pass, &user_cred.login, &fk)?;
 
-    let cleared = sym_decrypt(&read_ctrl_file()?, &mk, &iv.as_bytes())?;
-    let is_correct = cleared.eq(CONTROL_FILE_CONTENT);
+    log("tae");
+    let mut cleared = Vec::new();
+    sym_decrypt(&read_ctrl_file()?, &mk, &iv, &mut cleared)?;
+    let is_correct = cleared.eq(&CONTROL_FILE_CONTENT);
 
     return match is_correct {
         true => Ok(mk),
@@ -93,10 +98,12 @@ pub fn obtain_cred(user_cred: Cred, cred_name: &str) -> Result<Cred, JsValue> {
     let ciphertext = read_cred_file(cred_name).expect("");
 
     // creates in-place buffer for the cipher
-    let cleared = sym_decrypt(&ciphertext, &mk, &cred_iv.as_bytes()).expect("");
+    let mut cleared = Vec::new();
+    sym_decrypt(&ciphertext, &mk, &cred_iv, &mut cleared).expect("");
+
     return Ok(Cred {
         login: cred_name.to_string(),
-        pass: cleared.to_string(),
+        pass: String::from_utf8(cleared).expect(""),
     });
 }
 
@@ -104,10 +111,11 @@ pub fn obtain_cred(user_cred: Cred, cred_name: &str) -> Result<Cred, JsValue> {
 pub fn create_cred(user_cred: Cred, target_cred: Cred) -> Result<bool, JsValue> {
     let mk = check_login(user_cred).expect("");
     let cred_iv = write_iv_file(&target_cred.login).expect("");
+log("tae");
+    let mut ciphered = Vec::new();
+    sym_encrypt(&target_cred.pass.as_bytes(), &mk, &cred_iv, &mut ciphered).expect("");
+    log("tamer");
 
-    let ciphered = sym_encrypt(&target_cred.pass, &mk, &cred_iv).expect("");
-
-    write_cred_file(&target_cred.login, &ciphered)
-        .expect("");
+    write_cred_file(&target_cred.login, &ciphered).expect("");
     return Ok(true);
 }
