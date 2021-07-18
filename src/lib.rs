@@ -106,15 +106,17 @@ pub fn obtain_cred(user_cred: Cred, cred_name: &str) -> Result<Cred, JsValue> {
     });
 }
 
+/// Encrypts given credentials.
 #[wasm_bindgen]
 pub fn create_cred(user_cred: Cred, target_cred: Cred) -> Result<bool, JsValue> {
     let mk = check_login(user_cred).expect("");
+
     let cred_iv = write_iv_file(&target_cred.login).expect("");
-    
+
     let mut ciphered = Vec::new();
     sym_encrypt(&target_cred.pass.as_bytes(), &mk, &cred_iv, &mut ciphered).expect("");
-    log("tamer");
 
+    log("tamer4");
     write_cred_file(&target_cred.login, &ciphered).expect("");
     return Ok(true);
 }

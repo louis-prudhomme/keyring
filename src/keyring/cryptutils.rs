@@ -1,8 +1,8 @@
 use crate::keyring::constants::*;
 use crate::keyring::errors::KeyringError;
-use crate::log;
 use argon2::{Algorithm, Argon2, Params};
 use block_modes::BlockMode;
+use crate::log;
 
 pub fn hash_password(password: &str, salt: &str, pepper: &[u8]) -> Result<ArgonHash, KeyringError> {
     let params = Params::default();
@@ -26,12 +26,12 @@ pub fn hash_password(password: &str, salt: &str, pepper: &[u8]) -> Result<ArgonH
     return Ok(buf);
 }
 
-pub fn sym_encrypt(clear: &[u8], mk: &[u8], iv: &[u8], out: &mut [u8]) -> Result<(), KeyringError> {
+pub fn sym_encrypt(clear: &[u8], mk: &[u8], iv: &[u8], out: &mut Vec<u8>) -> Result<(), KeyringError> {
     // configure cipher
     let cipher = CipherType::new_from_slices(&mk, &iv)?;
 
     // creates in-place buffer for the cipher
-    let mut buf = [0u8; 4096]; //todo might overflow
+    let mut buf = [0u8; BLOCK_SIZE]; //todo might overflow
     buf[..clear.len()].copy_from_slice(clear);
 
     // cipher password
@@ -40,6 +40,7 @@ pub fn sym_encrypt(clear: &[u8], mk: &[u8], iv: &[u8], out: &mut [u8]) -> Result
         .map_err(|e| KeyringError::from(e))
         .map(|arr| arr.to_vec())?;
 
+    out.resize(ciphered.len(), 0);
     return Ok(out.copy_from_slice(&ciphered));
 }
 
@@ -57,9 +58,7 @@ pub fn sym_decrypt(
     buf[..ciphertext.len()].copy_from_slice(ciphertext);
 
     let deciphered = cipher.decrypt(&mut buf).map(|arr| arr.to_vec())?;
-    log(&format!("{:?}", deciphered));
-    log(&format!("{:?}", deciphered.len()));
-
     out.resize(deciphered.len(), 0);
+    
     return Ok(out.copy_from_slice(&deciphered));
 }

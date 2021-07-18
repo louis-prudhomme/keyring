@@ -34,11 +34,3 @@ pub fn gen_rand_key() -> Key {
     thread_rng().fill_bytes(&mut buf);
     return buf;
 }
-
-pub fn u8_arr_to_string(array: &[u8]) -> String {
-    return (0..array.len())
-        .map(|i| array.get(i))
-        .map(|o| *o.unwrap())
-        .map(char::from)
-        .collect();
-}
