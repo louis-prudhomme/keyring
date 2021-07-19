@@ -1,4 +1,3 @@
-use crate::keyring::io::js_wrapper::log;
 use crate::keyring::constants::Key;
 use crate::keyring::constants::IV;
 use crate::keyring::constants::IV_LENGTH;
@@ -30,8 +29,5 @@ pub fn gen_rand_key() -> Key {
 
 pub fn times(n: usize, m: usize) -> usize {
     let div = n / m;
-    log(&format!("suce {}", n));
-    log(&format!("suce {}", m));
-    log(&format!("suce {}", div));
     return div + either!(n % m == 0 => 0 ; 1);
 }

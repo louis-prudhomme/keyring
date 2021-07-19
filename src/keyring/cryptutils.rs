@@ -36,7 +36,7 @@ pub fn sym_encrypt(
     let cipher = CipherType::new_from_slices(&mk, &iv)?;
 
     // creates in-place buffer for the cipher
-    let mut buf = Vec::new(); //todo might overflow ?
+    let mut buf = Vec::new();
 
     buf.resize(times(cleartext.len(), BLOCK_SIZE) * BLOCK_SIZE, 0);
     buf[..cleartext.len()].copy_from_slice(cleartext);

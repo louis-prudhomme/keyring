@@ -27,12 +27,8 @@ pub fn write_to_js(name: &str, contents: &[u8]) -> Result<(), KeyringError> {
 
 pub fn read_from_js(name: &str) -> Result<Vec<u8>, KeyringError> {
     let js_array = read_info(name).map_err(|e| KeyringError::from(e))?;
-    let mut res = Vec::new();
     
-    res.resize(js_array.length() as usize, 0); //todo might overflow
-    js_array.copy_to(&mut res); //todo not safe
-    
-    return Ok(res);
+    return Ok(js_array.to_vec());
 }
 
 pub fn check_info_exists_in_js(name: &str) -> bool {
