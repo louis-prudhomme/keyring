@@ -1,6 +1,5 @@
 use crate::keyring::constants::*;
 use crate::keyring::errors::KeyringError;
-use crate::keyring::io::js_wrapper::log;
 use crate::keyring::utils::times;
 use argon2::{Algorithm, Argon2, Params};
 use block_modes::BlockMode;
