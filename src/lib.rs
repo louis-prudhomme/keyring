@@ -1,20 +1,19 @@
 // The wasm-pack uses wasm-bindgen to build and generate JavaScript binding file.
 // Import the wasm-bindgen crate.
-use crate::keyring::constants::*;
-use crate::keyring::cryptutils::{hash_password, sym_decrypt, sym_encrypt};
-
-use wasm_bindgen::prelude::*;
 mod keyring;
 
+use crate::keyring::constants::*;
+use crate::keyring::cryptutils::*;
 use crate::keyring::errors::*;
 use crate::keyring::io::read::*;
 use crate::keyring::io::write::*;
-use crate::keyring::utils::Cred;
+use crate::keyring::cred::Cred;
+
+use wasm_bindgen::prelude::*;
 use std::panic;
 
 #[macro_use]
 extern crate serde_derive;
-use crate::keyring::io::js_wrapper::log;
 
 /// Checks whether a password database already exists.
 #[wasm_bindgen]
@@ -75,7 +74,7 @@ fn check_login(user_cred: Cred) -> Result<ArgonHash, KeyringError> {
 
     sym_decrypt(&read_ctrl_file()?, &mk, &iv, &mut cleared)?;
     let is_correct = cleared.eq(&CONTROL_FILE_CONTENT);
-    
+
     return match is_correct {
         true => Ok(mk),
         false => return Err(KeyringError::from("Incorrect password")),
@@ -83,7 +82,7 @@ fn check_login(user_cred: Cred) -> Result<ArgonHash, KeyringError> {
 }
 
 #[wasm_bindgen]
-pub fn obtain_cred(user_cred: Cred, cred_name: &str) -> Result<Cred, JsValue> {
+pub fn obtain_cred(user_cred: Cred, cred_name: &str) -> Result<String, JsValue> {
     if !check_cred_file_exists(cred_name) {
         panic!("No credential saved with this name");
     }
@@ -100,10 +99,7 @@ pub fn obtain_cred(user_cred: Cred, cred_name: &str) -> Result<Cred, JsValue> {
     let mut cleared = Vec::new();
     sym_decrypt(&ciphertext, &mk, &cred_iv, &mut cleared).expect("");
 
-    return Ok(Cred {
-        login: cred_name.to_string(),
-        pass: String::from_utf8(cleared).expect(""),
-    });
+    return Ok(String::from_utf8(cleared).expect(""));
 }
 
 /// Encrypts given credentials.
@@ -116,7 +112,6 @@ pub fn create_cred(user_cred: Cred, target_cred: Cred) -> Result<bool, JsValue> 
     let mut ciphered = Vec::new();
     sym_encrypt(&target_cred.pass.as_bytes(), &mk, &cred_iv, &mut ciphered).expect("");
 
-    log("tamer4");
     write_cred_file(&target_cred.login, &ciphered).expect("");
     return Ok(true);
 }
