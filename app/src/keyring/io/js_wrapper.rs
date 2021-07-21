@@ -2,7 +2,7 @@ use crate::keyring::errors::KeyringError;
 use js_sys::Uint8Array;
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen(module = "/js/scribe.js")]
+#[wasm_bindgen(module = "../js/scribe.js")]
 extern "C" {
     #[wasm_bindgen(catch)]
     fn check_exists(name: &str) -> Result<bool, JsValue>;

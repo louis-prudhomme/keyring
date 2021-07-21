@@ -1,16 +1,14 @@
-// The wasm-pack uses wasm-bindgen to build and generate JavaScript binding file.
-// Import the wasm-bindgen crate.
 mod keyring;
 
 use crate::keyring::constants::*;
+use crate::keyring::cred::Cred;
 use crate::keyring::cryptutils::*;
 use crate::keyring::errors::*;
 use crate::keyring::io::read::*;
 use crate::keyring::io::write::*;
-use crate::keyring::cred::Cred;
 
-use wasm_bindgen::prelude::*;
 use std::panic;
+use wasm_bindgen::prelude::*;
 
 #[macro_use]
 extern crate serde_derive;
@@ -31,7 +29,7 @@ pub fn sign_up(user_cred: Cred) -> Result<bool, JsValue> {
     }
 
     // create file key (randomly generated strings)
-    let fk = write_key_file().expect("");
+    let fk = write_key().expect("");
 
     // create salt & pepper to offer variability to password
     let hash = hash_password(&user_cred.pass, &user_cred.login, &fk).expect("");
@@ -44,13 +42,13 @@ pub fn sign_up(user_cred: Cred) -> Result<bool, JsValue> {
 /// Creates a control file to check password authenticity.
 fn create_ctrl_file(mk: ArgonHash) -> Result<(), KeyringError> {
     // create an iv (aes is a block cipher)
-    let iv = write_iv_file("")?;
+    let iv = write_iv("")?;
 
     let mut ciphered = vec![0; BLOCK_SIZE]; //todo different length % block size
     sym_encrypt(CONTROL_FILE_CONTENT, &mk, &iv, &mut ciphered)?;
 
     // creates the effective control file (ciphered with master key)
-    return write_ctrl_file(&ciphered);
+    return write_ctrl(&ciphered);
 }
 
 /// Returns true if the credentials match the database.
@@ -107,11 +105,11 @@ pub fn obtain_cred(user_cred: Cred, cred_name: &str) -> Result<String, JsValue> 
 pub fn create_cred(user_cred: Cred, target_cred: Cred) -> Result<bool, JsValue> {
     let mk = check_login(user_cred).expect("");
 
-    let cred_iv = write_iv_file(&target_cred.login).expect("");
+    let cred_iv = write_iv(&target_cred.login).expect("");
 
     let mut ciphered = Vec::new();
     sym_encrypt(&target_cred.pass.as_bytes(), &mk, &cred_iv, &mut ciphered).expect("");
 
-    write_cred_file(&target_cred.login, &ciphered).expect("");
+    write_cred(&target_cred.login, &ciphered).expect("");
     return Ok(true);
 }
