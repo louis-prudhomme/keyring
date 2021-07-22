@@ -53,7 +53,7 @@ fn create_ctrl_file(mk: ArgonHash) -> Result<(), KeyringError> {
     // create an iv (aes is a block cipher)
     let iv = write_iv_file("")?;
 
-    let mut ciphered = vec![0; BLOCK_SIZE]; //todo different length % block size
+    let mut ciphered = vec![0; BLOCK_SIZE];
     sym_encrypt(CONTROL_FILE_CONTENT, &mk, &iv, &mut ciphered)?;
 
     // creates the effective control file (ciphered with master key)
