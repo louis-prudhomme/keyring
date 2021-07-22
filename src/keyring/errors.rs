@@ -8,8 +8,8 @@ use wasm_bindgen::JsValue;
 
 #[derive(Debug)]
 pub struct KeyringError {
-    kind: String,
-    message: String,
+    pub kind: String,
+    pub message: String,
 }
 
 impl From<IoError> for KeyringError {
@@ -92,8 +92,8 @@ impl From<JsValue> for KeyringError {
     }
 }
 
-impl Into<JsValue> for KeyringError {
-    fn into(self) -> JsValue {
-        return JsValue::from(self.message);
+impl From<KeyringError> for JsValue {
+    fn from(e: KeyringError) -> JsValue {
+        return JsValue::from(e.message);
     }
 }

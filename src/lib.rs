@@ -3,14 +3,14 @@
 mod keyring;
 
 use crate::keyring::constants::*;
+use crate::keyring::cred::Cred;
 use crate::keyring::cryptutils::*;
 use crate::keyring::errors::*;
 use crate::keyring::io::read::*;
 use crate::keyring::io::write::*;
-use crate::keyring::cred::Cred;
 
-use wasm_bindgen::prelude::*;
 use std::panic;
+use wasm_bindgen::prelude::*;
 
 #[macro_use]
 extern crate serde_derive;
@@ -29,15 +29,22 @@ pub fn sign_up(user_cred: Cred) -> Result<bool, JsValue> {
     if check_db_exists() {
         panic!("Database already exists");
     }
+    if user_cred.login.is_empty() || user_cred.pass.is_empty() {
+        return Err(JsValue::from("Credentials must not be empty"));
+    }
+
+    if user_cred.login.len() < 8 {
+        return Err(JsValue::from("Credentials too short"));
+    }
 
     // create file key (randomly generated strings)
-    let fk = write_key_file().expect("");
+    let fk = write_key_file()?;
 
     // create salt & pepper to offer variability to password
-    let hash = hash_password(&user_cred.pass, &user_cred.login, &fk).expect("");
+    let hash = hash_password(&user_cred.pass, &user_cred.login, &fk)?;
 
     // create db (simple control file)
-    create_ctrl_file(hash).expect("");
+    create_ctrl_file(hash)?;
     return Ok(true);
 }
 
@@ -84,34 +91,54 @@ fn check_login(user_cred: Cred) -> Result<ArgonHash, KeyringError> {
 #[wasm_bindgen]
 pub fn obtain_cred(user_cred: Cred, cred_name: &str) -> Result<String, JsValue> {
     if !check_cred_file_exists(cred_name) {
-        panic!("No credential saved with this name");
+        return Err(JsValue::from("No credential saved with this name"));
     }
     if !check_db_exists() {
-        panic!("No password database exists");
+        return Err(JsValue::from("No password database exists"));
     }
-    let mk = check_login(user_cred).expect("");
-    let cred_iv = read_iv_file(&cred_name).expect("");
+
+    let mk = check_login(user_cred)?;
+    let cred_iv = read_iv_file(&cred_name)?;
 
     // read ciphered text
-    let ciphertext = read_cred_file(cred_name).expect("");
+    let ciphertext = read_cred_file(cred_name).map_err(|e| {
+        JsValue::from(format!(
+            "{} {}: {}",
+            e.kind, "Credential could not be read", e.message
+        ))
+    })?;
 
     // creates in-place buffer for the cipher
     let mut cleared = Vec::new();
-    sym_decrypt(&ciphertext, &mk, &cred_iv, &mut cleared).expect("");
+    sym_decrypt(&ciphertext, &mk, &cred_iv, &mut cleared).map_err(|e| {
+        JsValue::from(format!(
+            "{} {}: {}",
+            e.kind, "Credential could not be read", e.message
+        ))
+    })?;
 
-    return Ok(String::from_utf8(cleared).expect(""));
+    return Ok(String::from_utf8(cleared)
+        .map_err(|e| JsValue::from(format!("UTF8 Error: {}", e.to_string())))?);
 }
 
 /// Encrypts given credentials.
 #[wasm_bindgen]
 pub fn create_cred(user_cred: Cred, target_cred: Cred) -> Result<bool, JsValue> {
-    let mk = check_login(user_cred).expect("");
+    if target_cred.login.is_empty() || target_cred.pass.is_empty() {
+        return Err(JsValue::from("Credentials must not be empty"));
+    }
 
-    let cred_iv = write_iv_file(&target_cred.login).expect("");
+    if target_cred.login.len() < 8 {
+        return Err(JsValue::from("Credentials too short"));
+    }
+
+    let mk = check_login(user_cred)?;
+
+    let cred_iv = write_iv_file(&target_cred.login)?;
 
     let mut ciphered = Vec::new();
-    sym_encrypt(&target_cred.pass.as_bytes(), &mk, &cred_iv, &mut ciphered).expect("");
+    sym_encrypt(&target_cred.pass.as_bytes(), &mk, &cred_iv, &mut ciphered)?;
 
-    write_cred_file(&target_cred.login, &ciphered).expect("");
+    write_cred_file(&target_cred.login, &ciphered)?;
     return Ok(true);
 }
