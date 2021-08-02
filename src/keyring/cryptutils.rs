@@ -1,6 +1,7 @@
 use crate::keyring::constants::*;
 use crate::keyring::errors::KeyringError;
 use argon2::{Algorithm, Argon2, Params};
+use sha3::{Digest, Sha3_256};
 
 use aes_gcm_siv::{Aes256GcmSiv, Key, Nonce};
 use aes_gcm_siv::aead::{Aead, NewAead};
@@ -19,8 +20,8 @@ pub fn hash_password(password: &str, salt: &str, pepper: &[u8]) -> Result<ArgonH
     argon.hash_password_into(
         Algorithm::Argon2id,
         password.as_bytes(),
-        salt.as_bytes(),
-        salt.as_bytes(),
+        &hash(salt.as_bytes())?,
+        &hash(salt.as_bytes())?,
         &mut buf,
     )?;
 
@@ -56,4 +57,12 @@ pub fn sym_decrypt(
     let cleared = cipher.decrypt(nonce, ciphertext)?;
 
     return Ok(cleared);
+}
+
+pub fn hash(
+    cleartext: &[u8]
+) -> Result<Vec<u8>, KeyringError> {
+    let mut hasher = Sha3_256::new();
+    hasher.update(cleartext);
+    return Ok(hasher.finalize().to_vec());
 }
