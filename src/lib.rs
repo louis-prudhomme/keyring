@@ -53,8 +53,7 @@ fn create_ctrl_file(mk: ArgonHash) -> Result<(), KeyringError> {
     // create an iv (aes is a block cipher)
     let iv = write_iv_file("")?;
 
-    let mut ciphered = vec![0; BLOCK_SIZE];
-    sym_encrypt(CONTROL_FILE_CONTENT, &mk, &iv, &mut ciphered)?;
+    let ciphered = sym_encrypt(CONTROL_FILE_CONTENT, &mk, &iv)?;
 
     // creates the effective control file (ciphered with master key)
     return write_ctrl_file(&ciphered);
@@ -77,9 +76,7 @@ fn check_login(user_cred: Cred) -> Result<ArgonHash, KeyringError> {
 
     let mk = hash_password(&user_cred.pass, &user_cred.login, &fk)?;
 
-    let mut cleared = Vec::new();
-
-    sym_decrypt(&read_ctrl_file()?, &mk, &iv, &mut cleared)?;
+    let cleared = sym_decrypt(&read_ctrl_file()?, &mk, &iv)?;
     let is_correct = cleared.eq(&CONTROL_FILE_CONTENT);
 
     return match is_correct {
@@ -109,8 +106,7 @@ pub fn obtain_cred(user_cred: Cred, cred_name: &str) -> Result<String, JsValue> 
     })?;
 
     // creates in-place buffer for the cipher
-    let mut cleared = Vec::new();
-    sym_decrypt(&ciphertext, &mk, &cred_iv, &mut cleared).map_err(|e| {
+    let cleared = sym_decrypt(&ciphertext, &mk, &cred_iv).map_err(|e| {
         JsValue::from(format!(
             "{} {}: {}",
             e.kind, "Credential could not be read", e.message
@@ -136,8 +132,7 @@ pub fn create_cred(user_cred: Cred, target_cred: Cred) -> Result<bool, JsValue> 
 
     let cred_iv = write_iv_file(&target_cred.login)?;
 
-    let mut ciphered = Vec::new();
-    sym_encrypt(&target_cred.pass.as_bytes(), &mk, &cred_iv, &mut ciphered)?;
+    let ciphered = sym_encrypt(&target_cred.pass.as_bytes(), &mk, &cred_iv)?;
 
     write_cred_file(&target_cred.login, &ciphered)?;
     return Ok(true);

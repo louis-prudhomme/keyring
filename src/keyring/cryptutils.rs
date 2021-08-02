@@ -1,8 +1,9 @@
 use crate::keyring::constants::*;
 use crate::keyring::errors::KeyringError;
-use crate::keyring::utils::times;
 use argon2::{Algorithm, Argon2, Params};
-use block_modes::BlockMode;
+
+use aes_gcm_siv::{Aes256GcmSiv, Key, Nonce};
+use aes_gcm_siv::aead::{Aead, NewAead};
 
 pub fn hash_password(password: &str, salt: &str, pepper: &[u8]) -> Result<ArgonHash, KeyringError> {
     let params = Params::default();
@@ -30,44 +31,29 @@ pub fn sym_encrypt(
     cleartext: &[u8],
     mk: &[u8],
     iv: &[u8],
-    out: &mut Vec<u8>,
-) -> Result<(), KeyringError> {
+) -> Result<Vec<u8>, KeyringError> {
     // configure cipher
-    let cipher = CipherType::new_from_slices(&mk, &iv)?;
+    let key = Key::from_slice(mk);
+    let cipher = Aes256GcmSiv::new(key);
+    let nonce = Nonce::from_slice(iv);
 
-    // creates in-place buffer for the cipher
-    let mut buf = Vec::new();
+    let ciphered = cipher.encrypt(nonce, cleartext.as_ref())?;
 
-    buf.resize(times(cleartext.len(), BLOCK_SIZE) * BLOCK_SIZE, 0);
-    buf[..cleartext.len()].copy_from_slice(cleartext);
-
-    // cipher password
-    let ciphered = cipher
-        .encrypt(&mut buf, cleartext.len())
-        .map_err(|e| KeyringError::from(e))
-        .map(|arr| arr.to_vec())?;
-
-    out.resize(ciphered.len(), 0);
-    return Ok(out.copy_from_slice(&ciphered));
+    return Ok(ciphered);
 }
 
 pub fn sym_decrypt(
     ciphertext: &[u8],
     mk: &[u8],
     iv: &[u8],
-    out: &mut Vec<u8>,
-) -> Result<(), KeyringError> {
+) -> Result<Vec<u8>, KeyringError> {
     // configure cipher
-    let cipher = CipherType::new_from_slices(mk, iv)?;
+    let key = Key::from_slice(mk);
+    let cipher = Aes256GcmSiv::new(key);
+    let nonce = Nonce::from_slice(iv);
 
-    // creates in-place buffer for the cipher
-    let mut buf = Vec::new();
+    
+    let cleared = cipher.decrypt(nonce, ciphertext)?;
 
-    buf.resize(times(ciphertext.len(), BLOCK_SIZE) * BLOCK_SIZE, 0);
-    buf[..ciphertext.len()].copy_from_slice(ciphertext);
-
-    let deciphered = cipher.decrypt(&mut buf).map(|arr| arr.to_vec())?;
-    out.resize(deciphered.len(), 0);
-
-    return Ok(out.copy_from_slice(&deciphered));
+    return Ok(cleared);
 }

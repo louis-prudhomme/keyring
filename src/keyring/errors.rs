@@ -5,6 +5,7 @@ use serde_json::error::Error as SerdeError;
 use std::io::Error as IoError;
 use std::string::FromUtf8Error;
 use wasm_bindgen::JsValue;
+use aes_gcm_siv::aead::Error as Aes256GcmSivError;
 
 #[derive(Debug)]
 pub struct KeyringError {
@@ -67,6 +68,15 @@ impl From<SerdeError> for KeyringError {
     fn from(e: SerdeError) -> Self {
         return KeyringError {
             kind: "JS parsing".to_string(),
+            message: e.to_string(),
+        };
+    }
+}
+
+impl From<Aes256GcmSivError> for KeyringError {
+    fn from(e: Aes256GcmSivError) -> Self {
+        return KeyringError {
+            kind: "AES".to_string(),
             message: e.to_string(),
         };
     }
