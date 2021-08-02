@@ -2,6 +2,7 @@
 // Import the wasm-bindgen crate.
 mod keyring;
 
+use crate::keyring::utils::gen_rand_ctrl;
 use crate::keyring::constants::*;
 use crate::keyring::cred::Cred;
 use crate::keyring::cryptutils::*;
@@ -53,7 +54,7 @@ fn create_ctrl_file(mk: ArgonHash) -> Result<(), KeyringError> {
     // create an iv (aes is a block cipher)
     let iv = write_iv_file("")?;
 
-    let ciphered = sym_encrypt(CONTROL_FILE_CONTENT, &mk, &iv)?;
+    let ciphered = sym_encrypt(&gen_rand_ctrl(), &mk, &iv)?;
 
     // creates the effective control file (ciphered with master key)
     return write_ctrl_file(&ciphered);
@@ -76,13 +77,10 @@ fn check_login(user_cred: Cred) -> Result<ArgonHash, KeyringError> {
 
     let mk = hash_password(&user_cred.pass, &user_cred.login, &fk)?;
 
-    let cleared = sym_decrypt(&read_ctrl_file()?, &mk, &iv)?;
-    let is_correct = cleared.eq(&CONTROL_FILE_CONTENT);
+    sym_decrypt(&read_ctrl_file()?, &mk, &iv)
+        .map_err(|_| KeyringError::from("Incorrect password"))?;
 
-    return match is_correct {
-        true => Ok(mk),
-        false => return Err(KeyringError::from("Incorrect password")),
-    };
+    return Ok(mk);
 }
 
 #[wasm_bindgen]
