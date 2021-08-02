@@ -1,7 +1,7 @@
 use crate::keyring::constants::*;
 use crate::keyring::errors::KeyringError;
 use argon2::{Algorithm, Argon2, Params};
-use sha3::{Digest, Sha3_256};
+use sha3::{Digest, Sha3_512};
 
 use aes_gcm_siv::{Aes256GcmSiv, Key, Nonce};
 use aes_gcm_siv::aead::{Aead, NewAead};
@@ -62,7 +62,7 @@ pub fn sym_decrypt(
 pub fn hash(
     cleartext: &[u8]
 ) -> Result<Vec<u8>, KeyringError> {
-    let mut hasher = Sha3_256::new();
+    let mut hasher = Sha3_512::new();
     hasher.update(cleartext);
     return Ok(hasher.finalize().to_vec());
 }
