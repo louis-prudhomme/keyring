@@ -93,7 +93,7 @@ ProtectedFs_Library_Name := sgx_tprotected_fs
 
 RustEnclave_C_Files := $(wildcard ./enclave/*.c)
 RustEnclave_C_Objects := $(RustEnclave_C_Files:.c=.o)
-RustEnclave_Include_Paths := -I$(CUSTOM_COMMON_PATH)/inc -I$(CUSTOM_EDL_PATH) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I ./enclave -I./include
+RustEnclave_Include_Paths := -I$(CUSTOM_EDL_PATH) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I ./enclave -I./include
 
 RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lenclave
 RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) $(ENCLAVE_CFLAGS) $(RustEnclave_Include_Paths)
