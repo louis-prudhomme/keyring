@@ -61,7 +61,6 @@ SGX_COMMON_CFLAGS += -fstack-protector
 CUSTOM_LIBRARY_PATH := ./lib
 CUSTOM_BIN_PATH := ./bin
 CUSTOM_EDL_PATH := ./edl
-CUSTOM_COMMON_PATH := ./common
 
 ######## EDL Settings ########
 
@@ -70,6 +69,7 @@ Enclave_EDL_Files := enclave/Enclave_t.c enclave/Enclave_t.h app/Enclave_u.c app
 ######## APP Settings ########
 
 App_Rust_Flags := --release 
+App_Rust_Flags_Custom := --target wasm32-unknown-unknown 
 App_SRC_Files := $(shell find app/ -type f -name '*.rs') $(shell find app/ -type f -name 'Cargo.toml')
 App_Include_Paths := -I ./app -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
@@ -93,7 +93,7 @@ ProtectedFs_Library_Name := sgx_tprotected_fs
 
 RustEnclave_C_Files := $(wildcard ./enclave/*.c)
 RustEnclave_C_Objects := $(RustEnclave_C_Files:.c=.o)
-RustEnclave_Include_Paths := -I$(CUSTOM_EDL_PATH) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I ./enclave -I./include
+RustEnclave_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I$(SGX_SDK)/include/epid -I ./enclave -I./include
 
 RustEnclave_Link_Libs := -L$(CUSTOM_LIBRARY_PATH) -lenclave
 RustEnclave_Compile_Flags := $(SGX_COMMON_CFLAGS) $(ENCLAVE_CFLAGS) $(RustEnclave_Include_Paths)
@@ -114,6 +114,7 @@ all: $(App_Name) $(Signed_RustEnclave_Name)
 $(Enclave_EDL_Files): $(SGX_EDGER8R) enclave/Enclave.edl
 	$(SGX_EDGER8R) --trusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --trusted-dir enclave
 	$(SGX_EDGER8R) --untrusted enclave/Enclave.edl --search-path $(SGX_SDK)/include --search-path $(CUSTOM_EDL_PATH) --untrusted-dir app
+
 	@echo "GEN  =>  $(Enclave_EDL_Files)"
 
 ######## App Objects ########
@@ -127,7 +128,7 @@ $(App_Enclave_u_Object): app/Enclave_u.o
 	cp $(App_Enclave_u_Object) ./lib
 
 $(App_Name): $(App_Enclave_u_Object) $(App_SRC_Files)
-	@cd app && SGX_SDK=$(SGX_SDK) cargo build $(App_Rust_Flags)
+	@cd app && SGX_SDK=$(SGX_SDK) cargo build $(App_Rust_Flags) $(App_Rust_Flags_Custom)
 	@echo "Cargo  =>  $@"
 	mkdir -p bin
 	cp $(App_Rust_Path)/app ./bin
