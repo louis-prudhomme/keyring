@@ -10,7 +10,6 @@ use crate::keyring::errors::*;
 use crate::keyring::io::read::*;
 use crate::keyring::io::write::*;
 
-use std::panic;
 use wasm_bindgen::prelude::*;
 
 #[macro_use]
@@ -28,7 +27,7 @@ pub fn check_db_exists() -> bool {
 pub fn sign_up(user_cred: Cred) -> Result<bool, JsValue> {
     // if db exist, then error
     if check_db_exists() {
-        panic!("Database already exists");
+        return Err(JsValue::from("Database already exists"));
     }
     if user_cred.login.is_empty() || user_cred.pass.is_empty() {
         return Err(JsValue::from("Credentials must not be empty"));
@@ -64,7 +63,7 @@ fn create_ctrl_file(mk: ArgonHash) -> Result<(), KeyringError> {
 #[wasm_bindgen]
 pub fn sign_in(user_cred: Cred) -> Result<bool, JsValue> {
     if !check_db_exists() {
-        panic!("No database");
+        return Err(JsValue::from("No database"));
     }
 
     return Ok(check_login(user_cred).is_ok());
